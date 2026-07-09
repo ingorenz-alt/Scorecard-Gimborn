@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Scorekarte · Gimborner Land</title>
+<style>
+  :root{
+    --paper:#F6F3E8; --ink:#17281D; --green:#1E5C3F; --green-dark:#123A28;
+    --line:#D8D2BE; --red:#B3372B; --gold:#8A7B45; --grey:#8a8a7a;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,'Helvetica Neue',system-ui,sans-serif; padding-bottom:130px}
+  header{background:var(--green-dark); color:var(--paper); padding:22px 18px 18px;
+    padding-top:calc(22px + env(safe-area-inset-top))}
+  header .eyebrow{font-size:11px; letter-spacing:.22em; text-transform:uppercase; opacity:.75}
+  header h1{margin:4px 0 0; font-size:30px; font-weight:900; letter-spacing:.02em; text-transform:uppercase}
+  header .sub{font-size:13px; margin-top:4px; opacity:.8}
+  section{padding:14px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end}
+  label.fld{display:grid; gap:4px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.08em}
+  input[type=number]{padding:10px 12px; font-size:18px; font-weight:700;
+    border:1px solid var(--line); border-radius:10px; background:#fff; width:92px}
+  .seg{display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden}
+  .seg button{padding:10px 16px; font-size:14px; font-weight:700; border:none; background:#fff; color:var(--ink)}
+  .seg button.on-gelb{background:#E8C93E}
+  .seg button.on-rot{background:var(--red); color:#fff}
+  .seg button.on{background:var(--green); color:#fff}
+  .card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px}
+  .ph-card{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
+  .ph-label{font-size:11px; text-transform:uppercase; letter-spacing:.1em; color:var(--gold); font-weight:700}
+  .ph-sub{font-size:12px; color:#6b6b5e; margin-top:2px}
+  .ph-val{font-size:34px; font-weight:900; color:var(--green)}
+  #holes{display:grid; gap:8px; padding:0 14px}
+  .hole{background:#fff; border:1px solid var(--line); border-radius:12px;
+    padding:10px 12px; display:flex; align-items:center; gap:9px}
+  .hole .nr{width:42px}
+  .hole .nr b{font-size:22px; font-weight:900; color:var(--green); line-height:1; display:block}
+  .hole .nr small{font-size:10px; color:var(--grey)}
+  .hole .info{flex:1; min-width:0}
+  .hole .info .par{font-size:13px; font-weight:700}
+  .hole .info .par span{color:var(--grey); font-weight:400}
+  .hole .info .vs{font-size:11px; color:var(--gold); font-weight:700; margin-top:2px}
+  .stp{width:40px; height:40px; border-radius:10px; border:1px solid var(--line);
+    background:#fff; font-size:22px; font-weight:700; color:var(--green); line-height:1}
+  .stp:active{transform:scale(.94)}
+  .scr{width:44px; height:44px; display:flex; align-items:center; justify-content:center;
+    font-size:20px; font-weight:900; border:1.5px solid transparent}
+  .scr.birdie{border-radius:50%; border-color:var(--red); color:var(--red)}
+  .scr.eagle{border-radius:50%; border-color:var(--red); color:var(--red);
+    box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--red)}
+  .scr.bogey{border-radius:4px; border-color:var(--ink)}
+  .scr.dbogey{border-radius:4px; border-color:var(--ink);
+    box-shadow:0 0 0 2px var(--paper),0 0 0 3.5px var(--ink)}
+  .scr.strich{color:var(--grey)}
+  .pts{width:38px; text-align:center}
+  .pts b{font-size:18px; font-weight:900}
+  .pts small{font-size:9px; color:var(--grey); display:block}
+  .hint{font-size:11px; color:var(--grey); padding:6px 16px}
+  .btn{width:100%; padding:13px; border-radius:12px; font-weight:700; font-size:15px; border:none}
+  .btn:active{transform:scale(.98)}
+  .btn-green{background:var(--green); color:#fff}
+  .btn-outline{background:#fff; border:1px solid var(--line); color:var(--red)}
+  .btn-gold{background:transparent; border:1px dashed var(--gold); color:var(--gold)}
+  .btn+.btn{margin-top:10px}
+  #settings .grid{display:grid; gap:8px; margin-top:10px}
+  #settings .hrow{display:grid; grid-template-columns:36px 1fr 1fr 1fr; gap:8px; align-items:center; font-size:13px}
+  #settings input{width:60px; padding:6px; font-size:14px; border-radius:8px}
+  #settings .warn{font-size:13px; color:var(--red); font-weight:700; margin-top:10px}
+  footer{position:fixed; bottom:0; left:0; right:0; background:var(--green-dark); color:var(--paper);
+    display:grid; grid-template-columns:repeat(4,1fr);
+    padding:12px 10px calc(12px + env(safe-area-inset-bottom));
+    box-shadow:0 -4px 16px rgba(0,0,0,.25)}
+  footer .cell{text-align:center}
+  footer .cell small{font-size:10px; text-transform:uppercase; letter-spacing:.12em; opacity:.7; display:block}
+  footer .cell b{font-size:22px; font-weight:900}
+  .toast{position:fixed; left:50%; transform:translateX(-50%); bottom:110px; background:var(--ink);
+    color:#fff; padding:10px 18px; border-radius:99px; font-size:13px; opacity:0; transition:opacity .3s; pointer-events:none; z-index:9}
+  .toast.show{opacity:1}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Golfanlage · Bergisches Land</div>
+  <h1>Gimborner Land</h1>
+  <div class="sub" id="head-sub"></div>
+</header>
+
+<section>
+  <div class="row">
+    <label class="fld">HCP-Index
+      <input type="number" id="hcpi" step="0.1" value="18.0" inputmode="decimal">
+    </label>
+    <div>
+      <label class="fld" style="margin-bottom:4px">Abschlag</label>
+      <div class="seg" id="tee-seg">
+        <button data-tee="gelb">Gelb</button><button data-tee="rot">Rot</button>
+      </div>
+    </div>
+    <div>
+      <label class="fld" style="margin-bottom:4px">Runde</label>
+      <div class="seg" id="round-seg">
+        <button data-r="9">9 Loch</button><button data-r="18">18 Loch</button>
+      </div>
+    </div>
+  </div>
+  <div class="card ph-card">
+    <div>
+      <div class="ph-label">Spielvorgabe (Course Handicap)</div>
+      <div class="ph-sub" id="ph-sub"></div>
+    </div>
+    <div class="ph-val" id="ph-val">–</div>
+  </div>
+</section>
+
+<div id="holes"></div>
+<div class="hint">Tipp: Zahl antippen = Strich (aufgegeben). ○ Birdie · ◎ Eagle · □ Bogey · ▣ Doppelbogey+</div>
+
+<section>
+  <button class="btn btn-green" id="btn-photo">📷 Scorekarte als Bild speichern</button>
+  <button class="btn btn-gold" id="btn-settings">Platzdaten bearbeiten (SI, CR, Slope…)</button>
+  <div class="card" id="settings" style="display:none; margin-top:10px"></div>
+  <button class="btn btn-outline" id="btn-reset">Neue Runde (Scores löschen)</button>
+</section>
+
+<footer>
+  <div class="cell"><small>Gespielt</small><b id="f-played">0/9</b></div>
+  <div class="cell"><small>Brutto</small><b id="f-brutto">–</b></div>
+  <div class="cell"><small>zu Par</small><b id="f-topar">–</b></div>
+  <div class="cell"><small>Stableford</small><b id="f-pts">0</b></div>
+</footer>
+
+<div class="toast" id="toast"></div>
+<canvas id="cv" style="display:none"></canvas>
+
+<script>
+'use strict';
+// ================= Platzdaten =================
+// Par & Längen: offizielle Scorecard (Abschlag Gelb, umgerechnet in Meter)
+// CR/Slope 18 Loch: Gelb Herren 71,7/139 · Rot Damen 73,6/129
+// si18 = offizieller 18-Loch-Vorgabenwert; 9-Loch-SI wird per (si18+1)/2 berechnet.
+const DEFAULT_COURSE = {
+  holes: [
+    {nr:1, par:4, m:344, si18:1},  {nr:2, par:4, m:374, si18:9},  {nr:3, par:3, m:143, si18:17},
+    {nr:4, par:5, m:471, si18:3},  {nr:5, par:4, m:371, si18:11}, {nr:6, par:4, m:326, si18:5},
+    {nr:7, par:4, m:295, si18:13}, {nr:8, par:3, m:175, si18:15}, {nr:9, par:5, m:445, si18:7}
+  ],
+  tees: {
+    gelb: {label:'Gelb', cr18:71.7, slope:139},
+    rot:  {label:'Rot',  cr18:73.6, slope:129}
+  }
+};
+
+// ================= State + Persistenz =================
+const LS_COURSE='gimborn.course.v2', LS_ROUND='gimborn.round.v1';
+let course = load(LS_COURSE) || JSON.parse(JSON.stringify(DEFAULT_COURSE));
+let round  = load(LS_ROUND)  || {hcpi:18.0, tee:'gelb', is18:false, scores:{}};
+
+function load(k){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null }catch(e){ return null } }
+function save(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)) }catch(e){} }
+function persist(){ save(LS_ROUND,round) }
+
+// ================= Rechenlogik (WHS) =================
+function courseHandicap(){
+  const t=course.tees[round.tee];
+  if(round.is18) return Math.round(round.hcpi*(t.slope/113)+(t.cr18-72));
+  return Math.round((round.hcpi/2)*(t.slope/113)+(t.cr18/2-36));
+}
+function strokesOnHole(ph,si,n){
+  if(ph>=0){ return Math.floor(ph/n)+((si<=ph%n)?1:0) }
+  const give=-ph; return si>n-give?-1:0;
+}
+function playHoles(){
+  const b=course.holes;
+  // 9 Loch: offizielle ungerade 18-Loch-SI → 9-Loch-Rang 1..9
+  if(!round.is18) return b.map((h,i)=>({...h, si:(h.si18+1)/2, idx:i}));
+  // 18 Loch: erste Runde = si18 (ungerade), zweite Runde = si18+1 (gerade)
+  const first  = b.map((h,i)=>({...h, si:h.si18, idx:i}));
+  const second = b.map((h,i)=>({...h, nr:h.nr+9, si:h.si18+1, idx:i+9}));
+  return first.concat(second);
+}
+function rows(){
+  const ph=courseHandicap(), n=round.is18?18:9;
+  return playHoles().map(h=>{
+    const strokes=strokesOnHole(ph,h.si,n);
+    const score=round.scores[h.idx];      // undefined = offen, 0 = Strich
+    const ndb=h.par+Math.max(strokes,0)+2; // Netto-Doppelbogey
+    let pts=null, ags=null;
+    if(score!==undefined){
+      pts = score===0 ? 0 : Math.max(0, 2+h.par+strokes-score);
+      ags = score===0 ? ndb : Math.min(score,ndb); // Adjusted Gross Score je Loch
+    }
+    return {...h,strokes,score,pts,ags,ndb};
+  });
+}
+function totals(){
+  const rs=rows(), n=round.is18?18:9;
+  const played=rs.filter(r=>r.score!==undefined);
+  const scored=played.filter(r=>r.score>0);
+  return {
+    n, rs, played,
+    brutto: scored.reduce((s,r)=>s+r.score,0),
+    toPar:  scored.reduce((s,r)=>s+r.score-r.par,0),
+    anyStrich: played.some(r=>r.score===0),
+    pts:    played.reduce((s,r)=>s+r.pts,0),
+    ags:    played.reduce((s,r)=>s+r.ags,0),
+    complete: played.length===n
+  };
+}
+// ================= UI Rendering =================
+const $=s=>document.querySelector(s);
+const fmt1=x=>x.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionDigits:1});
+
+function render(){
+  const t=course.tees[round.tee], ph=courseHandicap(), T=totals();
+  $('#head-sub').textContent = `9 Loch · Par 36 · ${t.label}: CR ${fmt1(t.cr18)} / Slope ${t.slope} (18 Loch)`;
+  $('#hcpi').value = round.hcpi;
+  document.querySelectorAll('#tee-seg button').forEach(b=>{
+    b.className = b.dataset.tee===round.tee ? 'on-'+round.tee : '';
+  });
+  document.querySelectorAll('#round-seg button').forEach(b=>{
+    b.className = (b.dataset.r==='18')===round.is18 ? 'on' : '';
+  });
+  $('#ph-val').textContent = ph>=0?ph:('+'+(-ph));
+  $('#ph-sub').textContent = round.is18 ? '2 × 9 Loch, SI 10–18 = zweite Runde' : '9-Loch-Runde, CR anteilig';
+
+  // Löcher
+  const holesEl=$('#holes'); holesEl.innerHTML='';
+  T.rs.forEach(r=>{
+    const div=document.createElement('div'); div.className='hole';
+    const vs = r.strokes>0 ? '/'.repeat(r.strokes)+` ${r.strokes} Vorgabeschl${r.strokes===1?'ag':'äge'}`
+             : r.strokes<0 ? 'Plus-Vorgabe' : '—';
+    let cls='scr', txt='·';
+    if(r.score===0){cls+=' strich'; txt='–'}
+    else if(r.score!==undefined){
+      txt=r.score; const d=r.score-r.par;
+      if(d<=-2)cls+=' eagle'; else if(d===-1)cls+=' birdie';
+      else if(d===1)cls+=' bogey'; else if(d>=2)cls+=' dbogey';
+    }
+    const pc = r.pts===null?'#c9c4ae': r.pts>=2?'var(--green)': r.pts===1?'var(--gold)':'var(--red)';
+    div.innerHTML=`
+      <div class="nr"><b>${r.nr}</b><small>SI ${r.si}</small></div>
+      <div class="info"><div class="par">Par ${r.par} <span>· ${r.m} m</span></div><div class="vs">${vs}</div></div>
+      <button class="stp" data-a="minus" data-i="${r.idx}">−</button>
+      <div class="${cls}" data-a="strich" data-i="${r.idx}" title="Tippen = Strich / zurücksetzen">${txt}</div>
+      <button class="stp" data-a="plus" data-i="${r.idx}">+</button>
+      <div class="pts"><b style="color:${pc}">${r.pts??'·'}</b><small>Pkt.</small></div>`;
+    holesEl.appendChild(div);
+  });
+
+  // Footer
+  $('#f-played').textContent=`${T.played.length}/${T.n}`;
+  $('#f-brutto').textContent=T.brutto||'–';
+  $('#f-topar').textContent = T.played.some(r=>r.score>0) ? (T.toPar>0?'+'+T.toPar:T.toPar) : '–';
+  $('#f-pts').textContent=T.pts;
+
+  persist();
+}
+
+// ================= Interaktion =================
+$('#holes').addEventListener('click',e=>{
+  const el=e.target.closest('[data-a]'); if(!el)return;
+  const i=+el.dataset.i, a=el.dataset.a, rs=rows(), r=rs.find(x=>x.idx===i);
+  if(a==='strich'){
+    if(r.score===undefined) return;
+    round.scores[i] = r.score===0 ? undefined : 0;
+    if(round.scores[i]===undefined) delete round.scores[i];
+  } else {
+    const d=a==='plus'?1:-1;
+    const start=r.par+Math.max(r.strokes,0); // Einstieg bei Netto-Par
+    let next = (r.score===undefined||r.score===0) ? start : r.score+d;
+    round.scores[i]=Math.min(15,Math.max(1,next));
+  }
+  render();
+});
+$('#hcpi').addEventListener('change',e=>{ round.hcpi=parseFloat(e.target.value)||0; render(); });
+$('#tee-seg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){round.tee=b.dataset.tee; render();} });
+$('#round-seg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b){round.is18=b.dataset.r==='18'; render();} });
+$('#btn-reset').addEventListener('click',()=>{ round.scores={}; render(); toast('Neue Runde – viel Erfolg!'); });
+
+// Einstellungen
+$('#btn-settings').addEventListener('click',()=>{
+  const s=$('#settings');
+  if(s.style.display==='none'){ renderSettings(); s.style.display='block'; $('#btn-settings').textContent='Platzdaten schließen'; }
+  else{ s.style.display='none'; $('#btn-settings').textContent='Platzdaten bearbeiten (SI, CR, Slope…)'; }
+});
+function renderSettings(){
+  const s=$('#settings');
+  let h=`<div class="warn" style="color:var(--gold)">SI = offizieller 18-Loch-Vorgabenwert (1–17 ungerade). Daraus wird die 9-Loch-Verteilung automatisch berechnet.</div><div class="grid">`;
+  course.holes.forEach((x,i)=>{
+    h+=`<div class="hrow"><b>L${x.nr}</b>
+      <label>Par <input type="number" data-h="${i}" data-f="par" value="${x.par}" min="3" max="6"></label>
+      <label>SI18 <input type="number" data-h="${i}" data-f="si18" value="${x.si18}" min="1" max="18"></label>
+      <label>m <input type="number" data-h="${i}" data-f="m" value="${x.m}"></label></div>`;
+  });
+  h+='</div><div class="grid">';
+  for(const k of ['gelb','rot']){
+    const t=course.tees[k];
+    h+=`<div class="hrow" style="grid-template-columns:52px 1fr 1fr"><b>${t.label}</b>
+      <label>CR <input type="number" step="0.1" data-t="${k}" data-f="cr18" value="${t.cr18}"></label>
+      <label>Slope <input type="number" data-t="${k}" data-f="slope" value="${t.slope}"></label></div>`;
+  }
+  h+=`</div><button class="btn btn-green" id="btn-save-course" style="margin-top:12px">Platzdaten speichern</button>`;
+  s.innerHTML=h;
+  s.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',()=>{
+    const f=inp.dataset.f, v=f==='cr18'?parseFloat(inp.value):parseInt(inp.value);
+    if(isNaN(v))return;
+    if(inp.dataset.h!==undefined) course.holes[+inp.dataset.h][f]=v;
+    else course.tees[inp.dataset.t][f]=v;
+    render();
+  }));
+  $('#btn-save-course').addEventListener('click',()=>{ save(LS_COURSE,course); toast('Platzdaten gespeichert'); });
+}
+
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+
+// ================= Scorekarte als Bild (Fotos) =================
+$('#btn-photo').addEventListener('click',async()=>{
+  const blob=await drawScorecard();
+  const file=new File([blob],'scorekarte-gimborner-land.png',{type:'image/png'});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:'Scorekarte Gimborner Land'}); return }
+    catch(e){ if(e.name==='AbortError') return }
+  }
+  // Fallback: Download-Link (am iPhone: Bild lange drücken → „In Fotos sichern")
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=file.name; a.click();
+  toast('Bild heruntergeladen – über Teilen in Fotos sichern');
+});
+
+function drawScorecard(){
+  const T=totals(), t=course.tees[round.tee], ph=courseHandicap();
+  const S=2, W=760, rowH=52, top=210;
+  const H=top+(T.rs.length+2)*rowH+120;
+  const cv=$('#cv'); cv.width=W*S; cv.height=H*S;
+  const g=cv.getContext('2d'); g.scale(S,S);
+  const green='#123A28', paper='#F6F3E8', line='#D8D2BE', ink='#17281D', red='#B3372B', gold='#8A7B45';
+
+  g.fillStyle=paper; g.fillRect(0,0,W,H);
+  // Kopf
+  g.fillStyle=green; g.fillRect(0,0,W,130);
+  g.fillStyle='rgba(246,243,232,.75)'; g.font='700 13px -apple-system,sans-serif';
+  g.fillText('GOLFANLAGE · BERGISCHES LAND',30,42);
+  g.fillStyle=paper; g.font='900 40px -apple-system,sans-serif';
+  g.fillText('GIMBORNER LAND',30,86);
+  g.font='400 15px -apple-system,sans-serif'; g.fillStyle='rgba(246,243,232,.85)';
+  const d=new Date().toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'});
+  g.fillText(`${d} · Abschlag ${t.label} · HCPI ${fmt1(round.hcpi)} · Spielvorgabe ${ph>=0?ph:'+'+(-ph)} · ${T.n} Loch`,30,114);
+
+  // Tabellenkopf
+  const cols=[{x:30,w:70,l:'Loch'},{x:100,w:70,l:'Par'},{x:170,w:90,l:'Meter'},{x:260,w:60,l:'SI'},
+              {x:320,w:90,l:'Vorg.'},{x:410,w:110,l:'Score'},{x:520,w:110,l:'Punkte'},{x:630,w:100,l:'z. Par'}];
+  g.fillStyle=gold; g.font='700 13px -apple-system,sans-serif';
+  cols.forEach(c=>g.fillText(c.l.toUpperCase(),c.x,top-18));
+  g.strokeStyle=ink; g.lineWidth=1.5;
+  g.beginPath(); g.moveTo(30,top-10); g.lineTo(W-30,top-10); g.stroke();
+
+  g.font='600 18px -apple-system,sans-serif';
+  T.rs.forEach((r,i)=>{
+    const y=top+i*rowH+32;
+    if(i%2){ g.fillStyle='rgba(0,0,0,.03)'; g.fillRect(30,top+i*rowH,W-60,rowH); }
+    g.fillStyle=ink;
+    g.fillText(r.nr,cols[0].x,y); g.fillText(r.par,cols[1].x,y);
+    g.fillText(r.m,cols[2].x,y); g.fillText(r.si,cols[3].x,y);
+    g.fillText(r.strokes>0?'/'.repeat(r.strokes):(r.strokes<0?'+':'–'),cols[4].x,y);
+    // Score mit Golf-Notation
+    const sx=cols[5].x+18, sy=y-7;
+    if(r.score===undefined){ g.fillStyle='#b5b09a'; g.fillText('·',sx-4,y); }
+    else if(r.score===0){ g.fillStyle='#8a8a7a'; g.fillText('–',sx-6,y); }
+    else{
+      const df=r.score-r.par;
+      if(df===-1||df<=-2){ g.strokeStyle=red; g.beginPath(); g.arc(sx,sy,16,0,7); g.stroke();
+        if(df<=-2){ g.beginPath(); g.arc(sx,sy,21,0,7); g.stroke(); } g.fillStyle=red; }
+      else if(df===1||df>=2){ g.strokeStyle=ink; g.strokeRect(sx-16,sy-16,32,32);
+        if(df>=2)g.strokeRect(sx-21,sy-21,42,42); g.fillStyle=ink; }
+      else g.fillStyle=ink;
+      g.font='900 19px -apple-system,sans-serif';
+      g.fillText(r.score, sx-(String(r.score).length>1?11:6), y);
+      g.font='600 18px -apple-system,sans-serif';
+    }
+    g.fillStyle = r.pts===null?'#b5b09a': r.pts>=2?'#1E5C3F': r.pts===1?gold:red;
+    g.font='900 19px -apple-system,sans-serif';
+    g.fillText(r.pts===null?'·':r.pts,cols[6].x+8,y);
+    g.font='600 18px -apple-system,sans-serif'; g.fillStyle=ink;
+    if(r.score>0){ const dp=r.score-r.par; g.fillText(dp>0?'+'+dp:dp,cols[7].x,y); }
+    g.strokeStyle=line; g.lineWidth=1;
+    g.beginPath(); g.moveTo(30,top+(i+1)*rowH); g.lineTo(W-30,top+(i+1)*rowH); g.stroke();
+  });
+  // Summenzeile
+  const ty=top+T.rs.length*rowH+34;
+  g.strokeStyle=ink; g.lineWidth=2;
+  g.beginPath(); g.moveTo(30,ty-26); g.lineTo(W-30,ty-26); g.stroke();
+  g.fillStyle=ink; g.font='900 20px -apple-system,sans-serif';
+  g.fillText('GESAMT',30,ty+4);
+  g.fillText(T.rs.reduce((s,r)=>s+r.par,0),cols[1].x,ty+4);
+  g.fillText(T.brutto||'–',cols[5].x+2,ty+4);
+  g.fillStyle='#1E5C3F'; g.fillText(T.pts,cols[6].x+8,ty+4);
+  g.fillStyle=ink;
+  const anyScored = T.rs.some(r=>r.score>0);
+  g.fillText(anyScored?(T.toPar>0?'+'+T.toPar:T.toPar):'–',cols[7].x,ty+4);
+  g.fillStyle='#8a8a7a'; g.font='400 12px -apple-system,sans-serif';
+  g.fillText('○ Birdie · ◎ Eagle · □ Bogey · ▣ Doppelbogey+ · Striche als Netto-Doppelbogey',30,H-24);
+
+  return new Promise(res=>cv.toBlob(res,'image/png'));
+}
+
+render();
+</script>
+</body>
+</html>
