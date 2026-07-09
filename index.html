@@ -398,9 +398,14 @@ function drawScorecard(){
   const ty=top+T.rs.length*rowH+34;
   g.strokeStyle=ink; g.lineWidth=2;
   g.beginPath(); g.moveTo(30,ty-26); g.lineTo(W-30,ty-26); g.stroke();
-  g.fillStyle=ink; g.font='900 20px -apple-system,sans-serif';
-  g.fillText('GESAMT',30,ty+4);
-  g.fillText(T.rs.reduce((s,r)=>s+r.par,0),cols[1].x,ty+4);
+  g.fillStyle=ink; g.font='800 14px -apple-system,sans-serif';
+  g.fillText('GESAMT',30,ty+3);
+  // Par-Summe dynamisch hinter das Label setzen, sonst unter die Par-Spalte
+  const parSum=T.rs.reduce((s,r)=>s+r.par,0);
+  const labelEnd=30+g.measureText('GESAMT').width+16;
+  const parX=Math.max(cols[1].x, labelEnd);
+  g.font='900 19px -apple-system,sans-serif';
+  g.fillText(parSum,parX,ty+4);
   g.fillText(T.brutto||'–',cols[5].x+2,ty+4);
   g.fillStyle='#1E5C3F'; g.fillText(T.pts,cols[6].x+8,ty+4);
   g.fillStyle=ink;
