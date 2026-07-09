@@ -6,6 +6,50 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Scorekarte · Gimborner Land</title>
+<script>
+// Apple Touch Icon – wird beim ersten Laden generiert und als Link-Tag eingefügt
+(function(){
+  const S=512, cv=document.createElement('canvas');
+  cv.width=cv.height=S; const g=cv.getContext('2d');
+  // Hintergrund: Dunkelgrün
+  g.fillStyle='#123A28'; g.fillRect(0,0,S,S);
+  // Sternenhimmel-Textur (subtile Punkte)
+  g.fillStyle='rgba(246,243,232,0.04)';
+  for(let i=0;i<120;i++){g.beginPath();g.arc(Math.random()*S,Math.random()*S*.55,Math.random()*2.5+.5,0,7);g.fill();}
+  // Grüne Putting-Fläche (sanfter Hügel unten)
+  g.fillStyle='#1E5C3F';
+  g.beginPath();
+  g.ellipse(S/2, S*0.92, S*0.72, S*0.38, 0, Math.PI, 0);
+  g.fill();
+  // Fahnenstange
+  const px=S*0.48, py=S*0.72, ph=S*0.38;
+  g.strokeStyle='#F6F3E8'; g.lineWidth=10; g.lineCap='round';
+  g.beginPath(); g.moveTo(px,py); g.lineTo(px,py-ph); g.stroke();
+  // Fahne (Dreieck, gold)
+  g.fillStyle='#C9A84C';
+  g.beginPath();
+  g.moveTo(px+4, py-ph);
+  g.lineTo(px+4+S*0.16, py-ph+S*0.08);
+  g.lineTo(px+4, py-ph+S*0.155);
+  g.closePath(); g.fill();
+  // Loch (Kreis auf dem Grün)
+  g.fillStyle='#0c2a1a';
+  g.beginPath(); g.ellipse(px, py+12, 22, 8, 0, 0, Math.PI*2); g.fill();
+  // Initialen "GL" oben rechts, dezent gold
+  g.fillStyle='rgba(201,168,76,0.75)';
+  g.font='900 68px -apple-system,sans-serif';
+  g.textAlign='right'; g.textBaseline='top';
+  g.fillText('GL', S-36, 38);
+  // Subtile Vignette
+  const vg=g.createRadialGradient(S/2,S/2,S*0.28,S/2,S/2,S*0.72);
+  vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.35)');
+  g.fillStyle=vg; g.fillRect(0,0,S,S);
+  // Als apple-touch-icon einsetzen
+  const lnk=document.createElement('link');
+  lnk.rel='apple-touch-icon'; lnk.href=cv.toDataURL('image/png');
+  document.head.appendChild(lnk);
+})();
+</script>
 <style>
   :root{
     --paper:#F6F3E8; --ink:#17281D; --green:#1E5C3F; --green-dark:#123A28;
@@ -141,14 +185,14 @@
 <script>
 'use strict';
 // ================= Platzdaten =================
-// Par & Längen: offizielle Scorecard (Abschlag Gelb, umgerechnet in Meter)
+// Par, Längen & SI: offizielle 18-Loch-Scorekarte Gimborner Land
 // CR/Slope 18 Loch: Gelb Herren 71,7/139 · Rot Damen 73,6/129
 // si18 = offizieller 18-Loch-Vorgabenwert; 9-Loch-SI wird per (si18+1)/2 berechnet.
 const DEFAULT_COURSE = {
   holes: [
-    {nr:1, par:4, m:344, si18:1},  {nr:2, par:4, m:374, si18:9},  {nr:3, par:3, m:143, si18:17},
-    {nr:4, par:5, m:471, si18:3},  {nr:5, par:4, m:371, si18:11}, {nr:6, par:4, m:326, si18:5},
-    {nr:7, par:4, m:295, si18:13}, {nr:8, par:3, m:175, si18:15}, {nr:9, par:5, m:445, si18:7}
+    {nr:1, par:4, mGelb:376, mRot:334, si18:1},  {nr:2, par:4, mGelb:409, mRot:358, si18:5},  {nr:3, par:3, mGelb:156, mRot:137, si18:17},
+    {nr:4, par:5, mGelb:515, mRot:453, si18:3},  {nr:5, par:4, mGelb:406, mRot:358, si18:9},  {nr:6, par:4, mGelb:357, mRot:312, si18:7},
+    {nr:7, par:4, mGelb:323, mRot:285, si18:13}, {nr:8, par:3, mGelb:191, mRot:175, si18:11}, {nr:9, par:5, mGelb:488, mRot:427, si18:15}
   ],
   tees: {
     gelb: {label:'Gelb', cr18:71.7, slope:139},
@@ -157,7 +201,7 @@ const DEFAULT_COURSE = {
 };
 
 // ================= State + Persistenz =================
-const LS_COURSE='gimborn.course.v2', LS_ROUND='gimborn.round.v1';
+const LS_COURSE='gimborn.course.v3', LS_ROUND='gimborn.round.v1';
 let course = load(LS_COURSE) || JSON.parse(JSON.stringify(DEFAULT_COURSE));
 let round  = load(LS_ROUND)  || {hcpi:18.0, tee:'gelb', is18:false, scores:{}};
 
@@ -176,7 +220,8 @@ function strokesOnHole(ph,si,n){
   const give=-ph; return si>n-give?-1:0;
 }
 function playHoles(){
-  const b=course.holes;
+  const mKey = round.tee==='rot' ? 'mRot' : 'mGelb';
+  const b = course.holes.map(h=>({...h, m:h[mKey]}));
   // 9 Loch: offizielle ungerade 18-Loch-SI → 9-Loch-Rang 1..9
   if(!round.is18) return b.map((h,i)=>({...h, si:(h.si18+1)/2, idx:i}));
   // 18 Loch: erste Runde = si18 (ungerade), zweite Runde = si18+1 (gerade)
@@ -291,12 +336,14 @@ $('#btn-settings').addEventListener('click',()=>{
 });
 function renderSettings(){
   const s=$('#settings');
-  let h=`<div class="warn" style="color:var(--gold)">SI = offizieller 18-Loch-Vorgabenwert (1–17 ungerade). Daraus wird die 9-Loch-Verteilung automatisch berechnet.</div><div class="grid">`;
+  const mKey = round.tee==='rot' ? 'mRot' : 'mGelb';
+  const mLabel = round.tee==='rot' ? 'm (Rot)' : 'm (Gelb)';
+  let h=`<div class="warn" style="color:var(--gold)">SI = offizieller 18-Loch-Vorgabenwert (1–17 ungerade). Daraus wird die 9-Loch-Verteilung automatisch berechnet. Länge bezieht sich auf den gewählten Abschlag (${round.tee==='rot'?'Rot':'Gelb'}).</div><div class="grid">`;
   course.holes.forEach((x,i)=>{
     h+=`<div class="hrow"><b>L${x.nr}</b>
       <label>Par <input type="number" data-h="${i}" data-f="par" value="${x.par}" min="3" max="6"></label>
       <label>SI18 <input type="number" data-h="${i}" data-f="si18" value="${x.si18}" min="1" max="18"></label>
-      <label>m <input type="number" data-h="${i}" data-f="m" value="${x.m}"></label></div>`;
+      <label>${mLabel} <input type="number" data-h="${i}" data-f="${mKey}" value="${x[mKey]}"></label></div>`;
   });
   h+='</div><div class="grid">';
   for(const k of ['gelb','rot']){
