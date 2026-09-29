@@ -71,7 +71,8 @@
   .seg{display:flex; border:1px solid var(--line); border-radius:10px; overflow:hidden}
   .seg button{padding:10px 16px; font-size:14px; font-weight:700; border:none; background:#fff; color:var(--ink)}
   .seg button.on-gelb{background:#E8C93E}
-  .seg button.on-rot{background:var(--red); color:#fff}
+  .seg button.on-rotDame{background:var(--red); color:#fff}
+  .seg button.on-rotHerr{background:var(--red); color:#fff; opacity:.82}
   .seg button.on{background:var(--green); color:#fff}
   .card{background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px 14px}
   .ph-card{display:flex; justify-content:space-between; align-items:center; margin-top:12px}
@@ -143,7 +144,7 @@
     <div>
       <label class="fld" style="margin-bottom:4px">Abschlag</label>
       <div class="seg" id="tee-seg">
-        <button data-tee="gelb">Gelb</button><button data-tee="rot">Rot</button>
+        <button data-tee="gelb">Gelb</button><button data-tee="rotDame">Rot D</button><button data-tee="rotHerr">Rot H</button>
       </div>
     </div>
     <div>
@@ -185,23 +186,24 @@
 <script>
 'use strict';
 // ================= Platzdaten =================
-// Par, Längen & SI: offizielle 18-Loch-Scorekarte Gimborner Land
-// CR/Slope 18 Loch: Gelb Herren 71,7/139 · Rot Damen 73,6/129
-// si18 = offizieller 18-Loch-Vorgabenwert; 9-Loch-SI wird per (si18+1)/2 berechnet.
+// Quelle: offizielle Turnier-Scorekarte Gimborner Land ("In Memory of Reinhard Bursch", 23.08.26)
+// Par 4,4,3,5,4,4,4,3,5 gilt für Gelb & Rot-Damen; Rot-Herren spielt Loch 9+18 als Par 4 (Summe 70 statt 72)
+// si18 = offizieller 18-Loch-Vorgabenwert (bestätigt durch die Spielvorgabe-Spalte der Karte)
 const DEFAULT_COURSE = {
   holes: [
-    {nr:1, par:4, mGelb:376, mRot:334, si18:1},  {nr:2, par:4, mGelb:409, mRot:358, si18:5},  {nr:3, par:3, mGelb:156, mRot:137, si18:17},
-    {nr:4, par:5, mGelb:515, mRot:453, si18:3},  {nr:5, par:4, mGelb:406, mRot:358, si18:9},  {nr:6, par:4, mGelb:357, mRot:312, si18:7},
-    {nr:7, par:4, mGelb:323, mRot:285, si18:13}, {nr:8, par:3, mGelb:191, mRot:175, si18:11}, {nr:9, par:5, mGelb:488, mRot:427, si18:15}
+    {nr:1, par:4, mGelb:344, mRot:305, si18:1},  {nr:2, par:4, mGelb:374, mRot:327, si18:9},  {nr:3, par:3, mGelb:143, mRot:125, si18:17},
+    {nr:4, par:5, mGelb:471, mRot:414, si18:3},  {nr:5, par:4, mGelb:371, mRot:327, si18:11}, {nr:6, par:4, mGelb:326, mRot:285, si18:5},
+    {nr:7, par:4, mGelb:295, mRot:261, si18:13}, {nr:8, par:3, mGelb:175, mRot:160, si18:15}, {nr:9, par:5, mGelb:446, mRot:390, si18:7, parRotHerren:4}
   ],
   tees: {
-    gelb: {label:'Gelb', cr18:71.7, slope:139},
-    rot:  {label:'Rot',  cr18:73.6, slope:129}
+    gelb:    {label:'Gelb',      cr18:72.2, slope:133},
+    rotDame: {label:'Rot (D)',   cr18:73.9, slope:130},
+    rotHerr: {label:'Rot (H)',   cr18:68.3, slope:123, parAdjust:true}
   }
 };
 
 // ================= State + Persistenz =================
-const LS_COURSE='gimborn.course.v3', LS_ROUND='gimborn.round.v1';
+const LS_COURSE='gimborn.course.v4', LS_ROUND='gimborn.round.v2';
 let course = load(LS_COURSE) || JSON.parse(JSON.stringify(DEFAULT_COURSE));
 let round  = load(LS_ROUND)  || {hcpi:18.0, tee:'gelb', is18:false, scores:{}};
 
@@ -220,8 +222,12 @@ function strokesOnHole(ph,si,n){
   const give=-ph; return si>n-give?-1:0;
 }
 function playHoles(){
-  const mKey = round.tee==='rot' ? 'mRot' : 'mGelb';
-  const b = course.holes.map(h=>({...h, m:h[mKey]}));
+  const mKey = round.tee==='gelb' ? 'mGelb' : 'mRot';
+  const t = course.tees[round.tee];
+  const b = course.holes.map(h=>({
+    ...h, m:h[mKey],
+    par: (t.parAdjust && h.parRotHerren!==undefined) ? h.parRotHerren : h.par
+  }));
   // 9 Loch: offizielle ungerade 18-Loch-SI → 9-Loch-Rang 1..9
   if(!round.is18) return b.map((h,i)=>({...h, si:(h.si18+1)/2, idx:i}));
   // 18 Loch: erste Runde = si18 (ungerade), zweite Runde = si18+1 (gerade)
@@ -263,7 +269,8 @@ const fmt1=x=>x.toLocaleString('de-DE',{minimumFractionDigits:1,maximumFractionD
 
 function render(){
   const t=course.tees[round.tee], ph=courseHandicap(), T=totals();
-  $('#head-sub').textContent = `9 Loch · Par 36 · ${t.label}: CR ${fmt1(t.cr18)} / Slope ${t.slope} (18 Loch)`;
+  const parOut = course.holes.reduce((s,h)=> s+((t.parAdjust && h.parRotHerren!==undefined)?h.parRotHerren:h.par), 0);
+  $('#head-sub').textContent = `9 Loch · Par ${parOut} · ${t.label}: CR ${fmt1(t.cr18)} / Slope ${t.slope} (18 Loch)`;
   $('#hcpi').value = round.hcpi;
   document.querySelectorAll('#tee-seg button').forEach(b=>{
     b.className = b.dataset.tee===round.tee ? 'on-'+round.tee : '';
@@ -336,9 +343,9 @@ $('#btn-settings').addEventListener('click',()=>{
 });
 function renderSettings(){
   const s=$('#settings');
-  const mKey = round.tee==='rot' ? 'mRot' : 'mGelb';
-  const mLabel = round.tee==='rot' ? 'm (Rot)' : 'm (Gelb)';
-  let h=`<div class="warn" style="color:var(--gold)">SI = offizieller 18-Loch-Vorgabenwert (1–17 ungerade). Daraus wird die 9-Loch-Verteilung automatisch berechnet. Länge bezieht sich auf den gewählten Abschlag (${round.tee==='rot'?'Rot':'Gelb'}).</div><div class="grid">`;
+  const mKey = round.tee==='gelb' ? 'mGelb' : 'mRot';
+  const mLabel = round.tee==='gelb' ? 'm (Gelb)' : 'm (Rot)';
+  let h=`<div class="warn" style="color:var(--gold)">SI = offizieller 18-Loch-Vorgabenwert. Daraus wird die 9-Loch-Verteilung automatisch berechnet. Länge bezieht sich auf den gewählten Abschlag (${course.tees[round.tee].label}). Rot-Herren spielt Loch 9+18 als Par 4 automatisch (Sonderregel).</div><div class="grid">`;
   course.holes.forEach((x,i)=>{
     h+=`<div class="hrow"><b>L${x.nr}</b>
       <label>Par <input type="number" data-h="${i}" data-f="par" value="${x.par}" min="3" max="6"></label>
@@ -346,9 +353,9 @@ function renderSettings(){
       <label>${mLabel} <input type="number" data-h="${i}" data-f="${mKey}" value="${x[mKey]}"></label></div>`;
   });
   h+='</div><div class="grid">';
-  for(const k of ['gelb','rot']){
+  for(const k of ['gelb','rotDame','rotHerr']){
     const t=course.tees[k];
-    h+=`<div class="hrow" style="grid-template-columns:52px 1fr 1fr"><b>${t.label}</b>
+    h+=`<div class="hrow" style="grid-template-columns:70px 1fr 1fr"><b>${t.label}</b>
       <label>CR <input type="number" step="0.1" data-t="${k}" data-f="cr18" value="${t.cr18}"></label>
       <label>Slope <input type="number" data-t="${k}" data-f="slope" value="${t.slope}"></label></div>`;
   }
